@@ -8,6 +8,8 @@ import TransactionSummary from "./components/TransactionSummary";
 
 import { Address, DecoratedUtxo } from "src/types";
 
+import { createTransasction } from "../../utils/bitcoinjs-lib";
+
 interface Props {
   utxos: DecoratedUtxo[];
   changeAddresses: Address[];
@@ -24,8 +26,17 @@ export default function Send({ utxos, changeAddresses, mnemonic }: Props) {
     amountToSend: number
   ) => {
     try {
-      throw new Error("Function not implemented yet");
-    } catch (e) {
+      const currPsbt = await createTransasction(
+        utxos,
+        recipientAddress,
+        amountToSend,
+        changeAddresses[0]
+      );
+      console.log(currPsbt)
+      setTransaction(currPsbt)
+    } catch (e: any) {
+      const errMsg = e?.response?.data?.message
+      console.log(errMsg)
       setError((e as Error).message);
     }
   };

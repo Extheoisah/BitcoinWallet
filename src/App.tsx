@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { BrowserRouter as Router, Switch, Route } from "react-router-dom";
 import { MenuIcon } from "@heroicons/react/outline";
 
@@ -12,7 +12,10 @@ import Transactions from "src/pages/Transactions";
 import Utxos from "src/pages/UTXOs";
 import Settings from "src/pages/Settings";
 
-import { Address, DecoratedTx, DecoratedUtxo } from "src/types";
+import { Address, BlockstreamAPITransactionResponse, DecoratedTx, DecoratedUtxo } from "src/types";
+import { deriveChildPublicKey, getAddressFromChildPubkey, getMasterPrivateKey, getNewMnemonic, getXpubFromPrivateKey } from "./utils/bitcoinjs-lib";
+import { getTransactionsFromAddress } from "./utils/blockstream-api";
+import { serializeTxs } from "./utils";
 
 export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -24,22 +27,66 @@ export default function App() {
   const [transactions, setTransactions] = useState<DecoratedTx[]>([]); // eslint-disable-line @typescript-eslint/no-unused-vars
   const [utxos, setUtxos] = useState<DecoratedUtxo[]>([]); // eslint-disable-line @typescript-eslint/no-unused-vars
 
+  const newM = useMemo(() => getNewMnemonic(), [])
+
   // Mnemonic / Private Key / XPub
   useEffect(() => {
     const getSeed = async () => {
       try {
-        throw new Error("Function not implemented yet");
+        let newMnemonic = "";
+        if (process.env.REACT_APP_MNEMONIC) {
+          newMnemonic = process.env.REACT_APP_MNEMONIC;
+        } else {
+          // newMnemonic = getNewMnemonic();
+          newMnemonic = newM
+        }
+        setMnemonic(newMnemonic);
+        const newMasterPrivateKey = await getMasterPrivateKey(mnemonic);
+        setMasterFingerprint(newMasterPrivateKey.fingerprint);
+        const derivationPath = "m/84'/0'/0'"; // P2WPKH
+        const newXpub = getXpubFromPrivateKey(
+          newMasterPrivateKey,
+          derivationPath
+        );
+        setXpub(newXpub);
       } catch (e) {
         console.log(e);
       }
     };
     getSeed();
-  }, [mnemonic]);
+  }, [newM, mnemonic]);
 
   // Addresses
   useEffect(() => {
     try {
-      throw new Error("Function not implemented yet");
+      const currentAddressBatch: Address[] = [];
+
+      for (let i = 0; i < 10; i++) {
+        const derivationPath = `0/${i}`;
+        const currentChildPubkey = deriveChildPublicKey(xpub, derivationPath);
+        const currentAddress = getAddressFromChildPubkey(currentChildPubkey);
+        currentAddressBatch.push({
+          ...currentAddress,
+          derivationPath,
+          masterFingerprint,
+        });
+      }
+
+      setAddresses(currentAddressBatch);
+
+      const currentChangeAddressBatch: Address[] = [];
+      for (let i = 0; i < 10; i++) {
+        const derivationPath = `1/${i}`;
+        const currentChildPubkey = deriveChildPublicKey(xpub, derivationPath);
+        const currentAddress = getAddressFromChildPubkey(currentChildPubkey);
+        currentChangeAddressBatch.push({
+          ...currentAddress,
+          derivationPath,
+          masterFingerprint,
+        });
+      }
+
+      setChangeAddresses(currentChangeAddressBatch);
     } catch (e) {
       console.log(e);
     }
@@ -47,11 +94,28 @@ export default function App() {
 
   // Transactions
   useEffect(() => {
+    console.log(addresses[0])
     const fetchTransactions = async () => {
       try {
-        throw new Error("Function not implemented yet");
-      } catch (e) {
-        console.log(e);
+        const currentTransactionBatch: BlockstreamAPITransactionResponse[] = [];
+        for (let i = 0; i < 10; i++) {
+          const currentAddress = addresses[i];
+          const addressTransactions = await getTransactionsFromAddress(
+            currentAddress
+          );
+          currentTransactionBatch.push(...addressTransactions);
+        }
+        console.log(currentTransactionBatch)
+
+        const serializedTxs = serializeTxs(
+          currentTransactionBatch,
+          addresses,
+          changeAddresses
+        );
+
+        setTransactions(serializedTxs);
+      } catch (e: any) {
+        console.log(e?.response?.data);
       }
     };
 

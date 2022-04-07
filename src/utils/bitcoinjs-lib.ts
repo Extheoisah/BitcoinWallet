@@ -1,36 +1,53 @@
-import { BIP32Interface } from "bip32";
-import { payments, Psbt } from "bitcoinjs-lib";
+import { BIP32Interface, fromSeed } from "bip32";
+import { generateMnemonic, mnemonicToSeed } from "bip39";
+import { bip32, networks, payments, Psbt } from "bitcoinjs-lib";
+import coinselect from "coinselect";
 
 import { Address, DecoratedUtxo } from "src/types";
 
 export const getNewMnemonic = (): string => {
-  throw new Error("Function not implemented yet");
+  const mnemonic = generateMnemonic(256);
+  return mnemonic;
 };
 
 export const getMasterPrivateKey = async (
   mnemonic: string
 ): Promise<BIP32Interface> => {
-  throw new Error("Function not implemented yet");
+  const seed = await mnemonicToSeed(mnemonic);
+  const privateKey = fromSeed(seed, networks.testnet);
+  return privateKey;
 };
 
 export const getXpubFromPrivateKey = (
   privateKey: BIP32Interface,
   derivationPath: string
 ): string => {
-  throw new Error("Function not implemented yet");
+  // const derivationPath = "m/84'/0'/0'"; // P2WPKH
+  const child = privateKey.derivePath(derivationPath).neutered();
+  const xpub = child.toBase58();
+  return xpub;
 };
 
 export const deriveChildPublicKey = (
   xpub: string,
   derivationPath: string
 ): BIP32Interface => {
-  throw new Error("Function not implemented yet");
+  const node = bip32.fromBase58(xpub, networks.testnet);
+  const child = node.derivePath(derivationPath);
+  return child;
 };
 
 export const getAddressFromChildPubkey = (
   child: BIP32Interface
 ): payments.Payment => {
-  throw new Error("Function not implemented yet");
+  // const child = deriveChildPublicKey(xpub, derivationPath);
+
+  const address = payments.p2wpkh({
+    pubkey: child.publicKey,
+    network: networks.testnet,
+  });
+
+  return address;
 };
 
 export const createTransasction = async (
@@ -39,7 +56,50 @@ export const createTransasction = async (
   amountInSatoshis: number,
   changeAddress: Address
 ): Promise<Psbt> => {
-  throw new Error("Function not implemented yet");
+  const { inputs, outputs, fee } = coinselect(
+    utxos,
+    [
+      {
+        address: recipientAddress,
+        value: amountInSatoshis,
+      },
+    ],
+    1
+  );
+
+  if (!inputs || !outputs) throw new Error("Unable to construct transaction");
+  if (fee > amountInSatoshis) throw new Error("Fee is too high!");
+
+  const psbt = new Psbt({ network: networks.testnet });
+  psbt.setVersion(2); // These are defaults. This line is not needed.
+  psbt.setLocktime(0); // These are defaults. This line is not needed.
+
+  inputs.forEach((input) => {
+    psbt.addInput({
+      hash: input.txid,
+      index: input.vout,
+      sequence: 0xfffffffd, // enables RBF
+      witnessUtxo: {
+        value: input.value,
+        script: input.address.output!,
+      },
+      bip32Derivation: input.bip32Derivation,
+    });
+  });
+
+  outputs.forEach((output) => {
+    // coinselect doesnt apply address to change output, so add it here
+    if (!output.address) {
+      output.address = changeAddress.address!;
+    }
+
+    psbt.addOutput({
+      address: output.address,
+      value: output.value,
+    });
+  });
+
+  return psbt;
 };
 
 export const signTransaction = async (
