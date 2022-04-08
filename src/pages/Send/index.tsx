@@ -57,7 +57,7 @@ export default function Send({
           {watchMode ? (
             <div className="flex justify-center items-center mt-40">
               <p className="text-tabconf-blue-500 text-center text-2xl font-bold ">
-                You can not make transactions in watch mode!
+                You can not send coins in watch mode!
               </p>
             </div>
           ) : (
