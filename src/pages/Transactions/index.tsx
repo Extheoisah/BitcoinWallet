@@ -28,7 +28,7 @@ export default function Transactions({ transactions }: Props) {
                     ))}
                   </ul>
                 ) : (
-                  <EmptyState />
+                  <EmptyState transactions={transactions} />
                 )}
               </div>
             </div>

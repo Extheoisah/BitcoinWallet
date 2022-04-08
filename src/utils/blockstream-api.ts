@@ -18,7 +18,7 @@ export const getUtxosFromAddress = async (
   address: Address
 ): Promise<BlockstreamAPIUtxoResponse[]> => {
   const { data } = await axios.get(
-    `${BASE_URL}/address/${address.address}/utxo`
+    `${BASE_URL}/${address.address}/utxo`
   );
   return data;
 };

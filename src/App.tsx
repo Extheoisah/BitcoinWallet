@@ -12,9 +12,20 @@ import Transactions from "src/pages/Transactions";
 import Utxos from "src/pages/UTXOs";
 import Settings from "src/pages/Settings";
 
-import { Address, BlockstreamAPITransactionResponse, DecoratedTx, DecoratedUtxo } from "src/types";
-import { deriveChildPublicKey, getAddressFromChildPubkey, getMasterPrivateKey, getNewMnemonic, getXpubFromPrivateKey } from "./utils/bitcoinjs-lib";
-import { getTransactionsFromAddress } from "./utils/blockstream-api";
+import {
+  Address,
+  BlockstreamAPITransactionResponse,
+  DecoratedTx,
+  DecoratedUtxo,
+} from "src/types";
+import {
+  deriveChildPublicKey,
+  getAddressFromChildPubkey,
+  getMasterPrivateKey,
+  getNewMnemonic,
+  getXpubFromPrivateKey,
+} from "./utils/bitcoinjs-lib";
+import { getTransactionsFromAddress, getUtxosFromAddress } from "./utils/blockstream-api";
 import { serializeTxs } from "./utils";
 
 export default function App() {
@@ -26,9 +37,13 @@ export default function App() {
   const [changeAddresses, setChangeAddresses] = useState<Address[]>([]); // eslint-disable-line @typescript-eslint/no-unused-vars
   const [transactions, setTransactions] = useState<DecoratedTx[]>([]); // eslint-disable-line @typescript-eslint/no-unused-vars
   const [utxos, setUtxos] = useState<DecoratedUtxo[]>([]); // eslint-disable-line @typescript-eslint/no-unused-vars
+  const [addressType, setAddressType] = useState('') // eslint-disable-line @typescript-eslint/no-unused-vars
+  const [watchMode, setWatchMode] = useState(false) // eslint-disable-line @typescript-eslint/no-unused-vars
 
-  const newM = useMemo(() => getNewMnemonic(), [])
-
+  
+  console.log(addressType)
+  
+  const newM = useMemo(() => getNewMnemonic(), []);
   // Mnemonic / Private Key / XPub
   useEffect(() => {
     const getSeed = async () => {
@@ -38,7 +53,7 @@ export default function App() {
           newMnemonic = process.env.REACT_APP_MNEMONIC;
         } else {
           // newMnemonic = getNewMnemonic();
-          newMnemonic = newM
+          newMnemonic = newM;
         }
         setMnemonic(newMnemonic);
         const newMasterPrivateKey = await getMasterPrivateKey(mnemonic);
@@ -64,7 +79,7 @@ export default function App() {
       for (let i = 0; i < 10; i++) {
         const derivationPath = `0/${i}`;
         const currentChildPubkey = deriveChildPublicKey(xpub, derivationPath);
-        const currentAddress = getAddressFromChildPubkey(currentChildPubkey);
+        const currentAddress = getAddressFromChildPubkey(currentChildPubkey, addressType);
         currentAddressBatch.push({
           ...currentAddress,
           derivationPath,
@@ -78,7 +93,7 @@ export default function App() {
       for (let i = 0; i < 10; i++) {
         const derivationPath = `1/${i}`;
         const currentChildPubkey = deriveChildPublicKey(xpub, derivationPath);
-        const currentAddress = getAddressFromChildPubkey(currentChildPubkey);
+        const currentAddress = getAddressFromChildPubkey(currentChildPubkey, addressType);
         currentChangeAddressBatch.push({
           ...currentAddress,
           derivationPath,
@@ -94,7 +109,6 @@ export default function App() {
 
   // Transactions
   useEffect(() => {
-    console.log(addresses[0])
     const fetchTransactions = async () => {
       try {
         const currentTransactionBatch: BlockstreamAPITransactionResponse[] = [];
@@ -105,7 +119,6 @@ export default function App() {
           );
           currentTransactionBatch.push(...addressTransactions);
         }
-        console.log(currentTransactionBatch)
 
         const serializedTxs = serializeTxs(
           currentTransactionBatch,
@@ -126,7 +139,29 @@ export default function App() {
   useEffect(() => {
     const fetchUtxos = async () => {
       try {
-        throw new Error("Function not implemented yet");
+        const allAddresses: Address[] = [...addresses, ...changeAddresses];
+        const deocratedUtxos: DecoratedUtxo[] = [];
+
+        for (let i = 0; i < allAddresses.length; i++) {
+          const currentAddress: Address = allAddresses[i];
+          const utxos = await getUtxosFromAddress(currentAddress);
+
+          for (let j = 0; j < utxos.length; j++) {
+            deocratedUtxos.push({
+              ...utxos[j],
+              address: currentAddress,
+              bip32Derivation: [
+                {
+                  pubkey: currentAddress.pubkey!,
+                  path: `m/84'/0'/0'/${currentAddress.derivationPath}`,
+                  masterFingerprint: masterFingerprint,
+                },
+              ],
+            });
+          }
+        }
+
+        setUtxos(deocratedUtxos);
       } catch (e) {
         console.log(e);
       }
@@ -137,7 +172,7 @@ export default function App() {
 
   return (
     <Router>
-      <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+      <Sidebar watchMode={watchMode} setWatchMode={setWatchMode} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
       <div className="md:pl-64 flex flex-col flex-1">
         <div className="sticky top-0 z-10 md:hidden pl-1 pt-1 sm:pl-3 sm:pt-3 bg-gray-100">
           <button
@@ -157,6 +192,7 @@ export default function App() {
             <Addresses
               addresses={addresses}
               changeAddresses={changeAddresses}
+              setAddressType={setAddressType}
             />
           </Route>
           <Route exact path="/send">
@@ -164,6 +200,7 @@ export default function App() {
               utxos={utxos}
               changeAddresses={changeAddresses}
               mnemonic={mnemonic}
+              watchMode={watchMode}
             />
           </Route>
           <Route exact path="/receive">

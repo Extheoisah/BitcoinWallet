@@ -1,6 +1,6 @@
 import { BIP32Interface, fromSeed } from "bip32";
 import { generateMnemonic, mnemonicToSeed } from "bip39";
-import { bip32, networks, payments, Psbt } from "bitcoinjs-lib";
+import { address, bip32, networks, payments, Psbt } from "bitcoinjs-lib";
 import coinselect from "coinselect";
 
 import { Address, DecoratedUtxo } from "src/types";
@@ -37,11 +37,22 @@ export const deriveChildPublicKey = (
   return child;
 };
 
-export const getAddressFromChildPubkey = (
-  child: BIP32Interface
-): payments.Payment => {
-  // const child = deriveChildPublicKey(xpub, derivationPath);
+// export const getAddressFromChildPubkeyP2WPKH = (
+//   child: BIP32Interface,
+//   addressType: string
+// ): payments.Payment => {
+//   const address = payments.p2wpkh({
+//       pubkey: child.publicKey,
+//       network: networks.testnet,
+//     });
 
+//   return address;
+// };
+
+export const getAddressFromChildPubkey = (
+  child: BIP32Interface,
+  addressType: string
+): payments.Payment => {
   const address = payments.p2wpkh({
     pubkey: child.publicKey,
     network: networks.testnet,
@@ -106,5 +117,11 @@ export const signTransaction = async (
   psbt: any,
   mnemonic: string
 ): Promise<Psbt> => {
-  throw new Error("Function not implemented yet");
+  const seed = await mnemonicToSeed(mnemonic);
+  const root = bip32.fromSeed(seed, networks.testnet);
+
+  psbt.signAllInputsHD(root);
+  psbt.validateSignaturesOfAllInputs();
+  psbt.finalizeAllInputs();
+  return psbt;
 };

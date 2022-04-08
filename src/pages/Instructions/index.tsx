@@ -86,7 +86,7 @@ export default function Instructions() {
             </button>
 
             {content.map((section) => (
-              <SectionGroup>
+              <SectionGroup key={section.title}>
                 <SectionHeading>{section.title}</SectionHeading>
                 {section.sections.map((subsection) => (
                   <div

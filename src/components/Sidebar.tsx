@@ -1,4 +1,4 @@
-import { Fragment } from "react";
+import React, { Fragment } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Dialog, Transition } from "@headlessui/react";
 import {
@@ -19,10 +19,18 @@ function classNames(...classes: string[]) {
 interface Props {
   sidebarOpen: boolean;
   setSidebarOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  watchMode: boolean;
+  setWatchMode: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-export default function Sidebar({ sidebarOpen, setSidebarOpen }: Props) {
+export default function Sidebar({
+  sidebarOpen,
+  setSidebarOpen,
+  watchMode,
+  setWatchMode,
+}: Props) {
   const location = useLocation();
+
   const navigation = [
     {
       name: "Instructions",
@@ -59,6 +67,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: Props) {
       href: "/send",
       icon: PaperAirplaneIcon,
       current: location.pathname === "/send",
+      watch: watchMode
     },
     {
       name: "Settings",
@@ -221,6 +230,46 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: Props) {
                   {item.name}
                 </Link>
               ))}
+              <div
+                className="border-2 rounded-md border-tabconf-blue-400 mt-8 py-1 px-1 relative flex 
+              justify-between items-center"
+              >
+                <p className=" text-white mr-3 absolute bottom-0 right-0 bg-tabconf-blue-400 rounded-t-md px-1 font-medium">
+                  {watchMode ? "Watch mode" : "Transact"}
+                </p>
+                <div className="flex items-center justify-between gap-x-2">
+                  <svg
+                    onClick={() => setWatchMode(false)}
+                    xmlns="http://www.w3.org/2000/svg"
+                    className={`h-8 w-10 ml-1 rounded-md cursor-pointer border border-tabconf-blue-400 ${
+                      !watchMode
+                        ? "text-tabconf-blue-500 bg-tabconf-blue-100 hover:text-tabconf-blue-400 hover:bg-white"
+                        : "text-tabconf-blue-400 bg-tabconf-blue-700"
+                    }`}
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path d="M5 12a1 1 0 102 0V6.414l1.293 1.293a1 1 0 001.414-1.414l-3-3a1 1 0 00-1.414 0l-3 3a1 1 0 001.414 1.414L5 6.414V12zM15 8a1 1 0 10-2 0v5.586l-1.293-1.293a1 1 0 00-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L15 13.586V8z" />
+                  </svg>
+                  <svg
+                    onClick={() => setWatchMode(true)}
+                    xmlns="http://www.w3.org/2000/svg"
+                    className={`h-8 w-10 ml-1 cursor-pointer border border-tabconf-blue-400 ${
+                      watchMode
+                        ? "text-tabconf-blue-500 bg-tabconf-blue-100 hover:text-tabconf-blue-400 hover:bg-white"
+                        : "text-tabconf-blue-400 bg-tabconf-blue-700"
+                    }  rounded-md`}
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 7.414V15a1 1 0 11-2 0V7.414L6.707 9.707a1 1 0 01-1.414 0z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </div>
+              </div>
             </nav>
           </div>
           <div className="flex-shrink-0 flex bg-tabconf-blue-600 p-4">

@@ -11,9 +11,14 @@ function classNames(...classes: string[]) {
 interface Props {
   addresses: Address[];
   changeAddresses: Address[];
+  setAddressType: React.Dispatch<React.SetStateAction<string>>;
 }
 
-export default function Example({ addresses, changeAddresses }: Props) {
+export default function Example({
+  addresses,
+  changeAddresses,
+  setAddressType,
+}: Props) {
   const [currentTab, setCurrentTab] = useState("external");
 
   const tabs = [
@@ -32,12 +37,39 @@ export default function Example({ addresses, changeAddresses }: Props) {
     },
   ];
 
+  const addressBtn = [
+    { name: "p2pk", value: "p2pk" },
+    { name: "p2pkh", value: "p2pkh" },
+    { name: "p2sh", value: "p2sh" },
+    { name: "p2wsh", value: "p2wsh" },
+    { name: "p2wpkh", value: "p2wpkh" },
+    { name: "p2tr", value: "p2tr" },
+  ];
+
   return (
     <div className="min-h-full">
       <main className="flex-1">
         <div className="py-6">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <h1 className="text-2xl font-semibold text-gray-900">Addresses</h1>
+            <h1 className="text-2xl font-semibold text-gray-900 mb-8">
+              Addresses
+            </h1>
+            <div>
+              <span className="border border-tabconf-blue-600 px-2 py-2 rounded-lg font-medium mr-4 text-tabconf-blue-600">
+                Select Address Type
+              </span>
+              {addressBtn.map(({ name, value }, i) => (
+                <button
+                  onClick={() => setAddressType(value)}
+                  className="uppercase mr-4 inline-flex justify-center py-2 px-4 border 
+                  border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-tabconf-blue-600 
+                  hover:bg-tabconf-blue-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-tabconf-blue-50"
+                  key={i}
+                >
+                  {name}
+                </button>
+              ))}
+            </div>
             <div className="py-4">
               <div className="max-w-7xl mx-auto bg-white shadow rounded-t-md">
                 {/* Tabs */}
